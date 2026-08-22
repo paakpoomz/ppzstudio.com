@@ -1,0 +1,332 @@
+// ppzstudio.com — โครงฐานข้อมูล
+// แก้ไฟล์นี้แล้วรัน `pnpm db:migrate` เพื่อสร้าง migration ใหม่
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  // Prisma 7: connection URL ย้ายไปอยู่ใน prisma.config.ts แล้ว
+  // ส่วนตอน runtime ส่งผ่าน driver adapter ใน src/lib/db.ts
+}
+
+// ─────────────────────────────── enum ───────────────────────────────
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+}
+
+enum ProjectKind {
+  WEBSITE
+  APP
+  PROGRAM
+  MEDIA
+  LIVE_STREAM
+}
+
+enum MessageStatus {
+  NEW
+  READ
+  REPLIED
+  SPAM
+}
+
+enum DonationStatus {
+  PENDING
+  CONFIRMED
+  APPROVED
+  REJECTED
+}
+
+// ─────────────────────────────── ผู้ใช้ ───────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique @db.VarChar(190)
+  passwordHash String    @db.VarChar(255)
+  name         String    @db.VarChar(120)
+  role         UserRole  @default(EDITOR)
+  avatar       Media?    @relation("UserAvatar", fields: [avatarMediaId], references: [id], onDelete: SetNull)
+  avatarMediaId String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  posts             Post[]
+  projects          Project[]
+  revisions         PostRevision[]
+  uploads           Media[]         @relation("MediaUploader")
+  donationsApproved Donation[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────── ไฟล์ ───────────────────────────────
+
+model Media {
+  id           String   @id @default(cuid())
+  path         String   @unique @db.VarChar(400) // เทียบกับ UPLOAD_DIR เช่น 2026/08/xxxx.webp
+  filename     String   @db.VarChar(255) // ชื่อไฟล์ที่ผู้ใช้อัปมา ไว้ใช้ค้นหา
+  mime         String   @db.VarChar(80)
+  width        Int
+  height       Int
+  bytes        Int
+  altText      String?  @db.VarChar(300)
+  blurData     String?  @db.Text // base64 จิ๋วไว้ทำ placeholder ตอนโหลด
+  uploadedBy   User?    @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  postCovers    Post[]         @relation("PostCover")
+  postOgImages  Post[]         @relation("PostOgImage")
+  projectCovers Project[]      @relation("ProjectCover")
+  projectMedia  ProjectMedia[]
+  donationSlips Donation[]
+  userAvatars   User[]         @relation("UserAvatar")
+
+  @@index([createdAt(sort: Desc)])
+  @@map("media")
+}
+
+// ─────────────────────────────── บทความ ───────────────────────────────
+
+model Category {
+  id          String  @id @default(cuid())
+  slug        String  @unique @db.VarChar(120)
+  name        String  @db.VarChar(120)
+  description String? @db.VarChar(400)
+  sortOrder   Int     @default(0)
+
+  posts Post[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  slug String @unique @db.VarChar(120)
+  name String @db.VarChar(120)
+
+  posts PostTag[]
+
+  @@map("tags")
+}
+
+model Post {
+  id             String        @id @default(cuid())
+  slug           String        @unique @db.VarChar(200)
+  title          String        @db.VarChar(200)
+  excerpt        String?       @db.VarChar(400)
+  contentHtml    String        @db.LongText // sanitize แล้ว พร้อมแสดง
+  contentJson    Json // TipTap doc สำหรับเปิดแก้
+  status         ContentStatus @default(DRAFT)
+  publishedAt    DateTime?
+  readingMinutes Int           @default(1)
+  viewCount      Int           @default(0)
+
+  seoTitle       String? @db.VarChar(200)
+  seoDescription String? @db.VarChar(400)
+
+  cover        Media?  @relation("PostCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  coverMediaId String?
+  ogImage      Media?  @relation("PostOgImage", fields: [ogImageId], references: [id], onDelete: SetNull)
+  ogImageId    String?
+
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?
+  author     User      @relation(fields: [authorId], references: [id])
+  authorId   String
+
+  tags      PostTag[]
+  revisions PostRevision[]
+  stats     PostStat[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete — ถังขยะ
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([categoryId, status])
+  @@index([deletedAt])
+  @@map("posts")
+}
+
+model PostTag {
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId  String
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("post_tags")
+}
+
+model PostRevision {
+  id          String   @id @default(cuid())
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String
+  title       String   @db.VarChar(200)
+  contentJson Json
+  savedBy     User?    @relation(fields: [savedById], references: [id], onDelete: SetNull)
+  savedById   String?
+  createdAt   DateTime @default(now())
+
+  @@index([postId, createdAt(sort: Desc)])
+  @@map("post_revisions")
+}
+
+model PostStat {
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId   String
+  statDate DateTime @db.Date
+  views    Int      @default(0)
+
+  @@id([postId, statDate])
+  @@index([statDate])
+  @@map("post_stats")
+}
+
+// ─────────────────────────────── ผลงาน ───────────────────────────────
+
+model Tech {
+  id      String  @id @default(cuid())
+  slug    String  @unique @db.VarChar(120)
+  name    String  @db.VarChar(120)
+  iconSvg String? @db.Text
+
+  projects ProjectTech[]
+
+  @@map("techs")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  slug        String        @unique @db.VarChar(200)
+  title       String        @db.VarChar(200)
+  summary     String?       @db.VarChar(400)
+  contentHtml String        @db.LongText
+  contentJson Json
+  kind        ProjectKind
+  status      ContentStatus @default(DRAFT)
+
+  clientName String? @db.VarChar(160)
+  myRole     String? @db.VarChar(160)
+  year       Int?
+  liveUrl    String? @db.VarChar(400)
+  repoUrl    String? @db.VarChar(400)
+
+  cover        Media?  @relation("ProjectCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  coverMediaId String?
+
+  isFeatured Boolean @default(false)
+  sortOrder  Int     @default(0)
+
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+
+  techs   ProjectTech[]
+  gallery ProjectMedia[]
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([status, isFeatured, sortOrder])
+  @@index([kind, status])
+  @@index([deletedAt])
+  @@map("projects")
+}
+
+model ProjectTech {
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  tech      Tech    @relation(fields: [techId], references: [id], onDelete: Cascade)
+  techId    String
+
+  @@id([projectId, techId])
+  @@index([techId])
+  @@map("project_techs")
+}
+
+model ProjectMedia {
+  id        String  @id @default(cuid())
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  media     Media   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  mediaId   String
+  caption   String? @db.VarChar(300)
+  sortOrder Int     @default(0)
+
+  @@unique([projectId, mediaId])
+  @@index([projectId, sortOrder])
+  @@map("project_media")
+}
+
+// ─────────────────────────────── ระบบ ───────────────────────────────
+
+model ContactMessage {
+  id          String        @id @default(cuid())
+  name        String        @db.VarChar(160)
+  email       String        @db.VarChar(190)
+  phone       String?       @db.VarChar(40)
+  service     String?       @db.VarChar(80)
+  budgetRange String?       @db.VarChar(80)
+  message     String        @db.Text
+  sourceIp    String?       @db.VarChar(45)
+  userAgent   String?       @db.VarChar(400)
+  status      MessageStatus @default(NEW)
+  createdAt   DateTime      @default(now())
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("contact_messages")
+}
+
+model Donation {
+  id                String         @id @default(cuid())
+  refCode           String         @unique @db.VarChar(16) // รหัสอ้างอิงที่โชว์ให้ผู้บริจาค
+  name              String?        @db.VarChar(160)
+  message           String?        @db.VarChar(400)
+  amount            Decimal        @db.Decimal(10, 2) // เศษสตางค์คือตัวจับคู่กับสลิป
+  status            DonationStatus @default(PENDING)
+  promptpayPayload  String?        @db.VarChar(400)
+  slip              Media?         @relation(fields: [slipMediaId], references: [id], onDelete: SetNull)
+  slipMediaId       String?
+  sourceIp          String?        @db.VarChar(45)
+  approvedBy        User?          @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById      String?
+  approvedAt        DateTime?
+  createdAt         DateTime       @default(now())
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("donations")
+}
+
+model Redirect {
+  id         String   @id @default(cuid())
+  fromPath   String   @unique @db.VarChar(400)
+  toPath     String   @db.VarChar(400)
+  statusCode Int      @default(301)
+  createdAt  DateTime @default(now())
+
+  @@map("redirects")
+}
+
+model Setting {
+  key       String   @id @db.VarChar(120)
+  valueJson Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

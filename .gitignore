@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ยกเว้นไฟล์ตัวอย่าง env ให้ commit ได้
+!.env.example
+
+# Prisma client ที่ generate ออกมา
+/src/generated/
+
+# ไฟล์อัปโหลด (อยู่นอกโปรเจกต์อยู่แล้ว แต่กันพลาด)
+/uploads/
+
+# ไฟล์สำรองและของชั่วคราวที่ไม่ควรขึ้น git
+*.bak
+*.bak-*
+/backups/
+/logs/
