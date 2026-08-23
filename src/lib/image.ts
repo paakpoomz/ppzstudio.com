@@ -75,9 +75,13 @@ export async function processUpload(file: File): Promise<UploadedImage> {
   const storedPath = path.join(dir, `${id}.webp`);
   await writeFile(path.join(/*turbopackIgnore: true*/ uploadRoot(), storedPath), full.data);
 
-  // ขนาดย่อ — ไม่ขยายรูปที่เล็กกว่าเป้าอยู่แล้ว
+  // ขนาดย่อ — เขียนครบทุกขนาดเสมอ แม้รูปต้นทางจะเล็กกว่าเป้า
+  //
+  // mediaUrl() ประกอบ URL จากตัวเลขความกว้างอย่างเดียว ไม่ได้ถามว่าไฟล์นั้นมีจริงไหม
+  // ถ้าข้ามขนาดที่ใหญ่กว่ารูปต้นทางไป หน้าเว็บที่ขอ -1600 จะได้ 404 และรูปไม่ขึ้น
+  // (withoutEnlargement ทำให้ไฟล์ที่ได้ไม่ถูกขยายเกินขนาดจริงอยู่แล้ว)
   await Promise.all(
-    WIDTHS.filter((w) => w < full.info.width).map(async (w) => {
+    WIDTHS.map(async (w) => {
       const resized = await sharp(buffer)
         .rotate()
         .resize({ width: w, withoutEnlargement: true })
