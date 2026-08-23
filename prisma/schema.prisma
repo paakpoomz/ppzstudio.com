@@ -83,6 +83,11 @@ model Media {
   bytes        Int
   altText      String?  @db.VarChar(300)
   blurData     String?  @db.Text // base64 จิ๋วไว้ทำ placeholder ตอนโหลด
+
+  // จุดโฟกัสเป็นเปอร์เซ็นต์ของรูป (0–100) — ตรงกับ object-position ของ CSS
+  // ที่ไหนที่ครอปรูป (การ์ด, แบนเนอร์) จะยึดจุดนี้ไว้ในกรอบเสมอ แทนการตัดจากกึ่งกลาง
+  focalX       Int      @default(50)
+  focalY       Int      @default(50)
   uploadedBy   User?    @relation("MediaUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
   uploadedById String?
   createdAt    DateTime @default(now())

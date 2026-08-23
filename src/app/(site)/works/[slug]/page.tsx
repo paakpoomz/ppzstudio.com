@@ -88,6 +88,7 @@ export default async function ProjectPage({
           src={project.coverUrl}
           alt={project.cover?.altText ?? ""}
           fetchPriority="high"
+          style={{ objectPosition: project.coverPosition }}
           className="h-[38vh] min-h-[240px] w-full border-b border-line object-cover sm:h-[46vh]"
         />
       ) : null}

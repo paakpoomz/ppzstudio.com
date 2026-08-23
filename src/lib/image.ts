@@ -32,6 +32,20 @@ export function mediaUrl(storedPath: string, width?: number): string {
 }
 
 /**
+ * ค่า object-position ของรูปที่ถูกครอป — ยึดจุดโฟกัสที่เลือกไว้ให้อยู่ในกรอบ
+ *
+ * เก็บเป็นเปอร์เซ็นต์เพราะกรอบแต่ละที่คนละอัตราส่วน (การ์ด 4:3, แบนเนอร์กว้าง)
+ * ใช้ค่าเดียวกันได้หมดโดยไม่ต้องรู้ขนาดกรอบล่วงหน้า
+ */
+export function focalPosition(
+  media: { focalX: number; focalY: number } | null | undefined,
+): string {
+  const x = media?.focalX ?? 50;
+  const y = media?.focalY ?? 50;
+  return `${x}% ${y}%`;
+}
+
+/**
  * รับไฟล์ที่อัปมา → ตรวจว่าเป็นรูปจริง → แปลงใหม่เป็น WebP หลายขนาด
  *
  * การ "แปลงใหม่" สำคัญกว่าที่คิด: ไฟล์รูปที่แนบโค้ดอันตรายมาด้วย

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { ContentStatus } from "@/generated/prisma/enums";
-import { mediaUrl } from "@/lib/image";
+import { focalPosition, mediaUrl } from "@/lib/image";
 
 export const POSTS_PER_PAGE = 12;
 
@@ -23,7 +23,7 @@ const postCardSelect = {
   readingMinutes: true,
   viewCount: true,
   category: { select: { slug: true, name: true } },
-  cover: { select: { path: true, blurData: true, altText: true } },
+  cover: { select: { path: true, blurData: true, altText: true, focalX: true, focalY: true } },
 } as const;
 
 export type PostCard = {
@@ -37,6 +37,7 @@ export type PostCard = {
   category: { slug: string; name: string } | null;
   coverUrl: string | null;
   coverAlt: string | null;
+  coverPosition: string;
 };
 
 function toCard(p: {
@@ -48,7 +49,13 @@ function toCard(p: {
   readingMinutes: number;
   viewCount: number;
   category: { slug: string; name: string } | null;
-  cover: { path: string; blurData: string | null; altText: string | null } | null;
+  cover: {
+    path: string;
+    blurData: string | null;
+    altText: string | null;
+    focalX: number;
+    focalY: number;
+  } | null;
 }): PostCard {
   return {
     id: p.id,
@@ -61,6 +68,7 @@ function toCard(p: {
     category: p.category,
     coverUrl: p.cover ? mediaUrl(p.cover.path, 800) : null,
     coverAlt: p.cover?.altText ?? null,
+    coverPosition: focalPosition(p.cover),
   };
 }
 
@@ -116,6 +124,7 @@ export async function getPublishedPost(slug: string) {
   return {
     ...post,
     coverUrl: post.cover ? mediaUrl(post.cover.path, 1600) : null,
+    coverPosition: focalPosition(post.cover),
     ogImageUrl: post.cover ? mediaUrl(post.cover.path) : null,
   };
 }
@@ -200,7 +209,7 @@ const projectCardSelect = {
   kind: true,
   clientName: true,
   year: true,
-  cover: { select: { path: true, blurData: true, altText: true } },
+  cover: { select: { path: true, blurData: true, altText: true, focalX: true, focalY: true } },
   techs: { select: { tech: { select: { slug: true, name: true } } } },
 } as const;
 
@@ -214,6 +223,7 @@ export type ProjectCard = {
   year: number | null;
   coverUrl: string | null;
   coverAlt: string | null;
+  coverPosition: string;
   techs: { slug: string; name: string }[];
 };
 
@@ -225,7 +235,13 @@ function toProjectCard(p: {
   kind: string;
   clientName: string | null;
   year: number | null;
-  cover: { path: string; blurData: string | null; altText: string | null } | null;
+  cover: {
+    path: string;
+    blurData: string | null;
+    altText: string | null;
+    focalX: number;
+    focalY: number;
+  } | null;
   techs: { tech: { slug: string; name: string } }[];
 }): ProjectCard {
   return {
@@ -238,6 +254,7 @@ function toProjectCard(p: {
     year: p.year,
     coverUrl: p.cover ? mediaUrl(p.cover.path, 800) : null,
     coverAlt: p.cover?.altText ?? null,
+    coverPosition: focalPosition(p.cover),
     techs: p.techs.map((t) => t.tech),
   };
 }
@@ -282,6 +299,7 @@ export async function getPublishedProject(slug: string) {
   return {
     ...project,
     coverUrl: project.cover ? mediaUrl(project.cover.path, 1600) : null,
+    coverPosition: focalPosition(project.cover),
     gallery: project.gallery.map((g) => ({
       id: g.id,
       caption: g.caption,

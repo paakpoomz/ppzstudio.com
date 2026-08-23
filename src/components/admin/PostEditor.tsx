@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, ExternalLink, Loader2, Trash2, Upload } from "lucide-react";
 import { RichEditor } from "@/components/editor/RichEditor";
 import { StatusPill } from "@/components/admin/StatusPill";
+import { CoverFocalPicker } from "@/components/admin/CoverFocalPicker";
 import { formatThaiTime, toDateTimeLocalValue } from "@/lib/date";
 import { slugify } from "@/lib/slug";
 import type { ContentStatus } from "@/generated/prisma/enums";
@@ -24,6 +25,8 @@ export type EditorPost = {
   categoryId: string | null;
   coverMediaId: string | null;
   coverUrl: string | null;
+  coverFocalX: number;
+  coverFocalY: number;
   tags: string[];
 };
 
@@ -59,6 +62,10 @@ export function PostEditor({
   const [seoDescription, setSeoDescription] = useState(post.seoDescription ?? "");
   const [coverUrl, setCoverUrl] = useState(post.coverUrl);
   const [coverMediaId, setCoverMediaId] = useState(post.coverMediaId);
+  const [coverFocal, setCoverFocal] = useState({
+    x: post.coverFocalX,
+    y: post.coverFocalY,
+  });
   const [status, setStatus] = useState<ContentStatus>(post.status);
   const [publishAt, setPublishAt] = useState(
     post.publishedAt ? toDateTimeLocalValue(post.publishedAt) : "",
@@ -157,6 +164,7 @@ export function PostEditor({
     const media = (await res.json()) as { id: string; url: string };
     setCoverMediaId(media.id);
     setCoverUrl(media.url);
+    setCoverFocal({ x: 50, y: 50 });
     markDirty();
   }
 
@@ -288,13 +296,17 @@ export function PostEditor({
 
         <aside className="space-y-5">
           <Panel title="รูปปก">
-            {coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={coverUrl}
-                alt=""
-                className="mb-2 w-full rounded-lg border border-line"
-              />
+            {coverUrl && coverMediaId ? (
+              <div className="mb-3">
+                <CoverFocalPicker
+                  key={coverMediaId}
+                  mediaId={coverMediaId}
+                  url={coverUrl}
+                  initialX={coverFocal.x}
+                  initialY={coverFocal.y}
+                  previews={[{ label: "การ์ดในหน้ารายการ", ratio: "16 / 9" }]}
+                />
+              </div>
             ) : null}
             <input
               ref={coverInput}

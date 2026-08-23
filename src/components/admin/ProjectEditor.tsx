@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { RichEditor } from "@/components/editor/RichEditor";
 import { StatusPill } from "@/components/admin/StatusPill";
+import { CoverFocalPicker } from "@/components/admin/CoverFocalPicker";
 import { PROJECT_KIND_LABELS } from "@/components/site/ProjectCard";
 import { formatThaiTime } from "@/lib/date";
 import { slugify } from "@/lib/slug";
@@ -42,6 +43,8 @@ export type EditorProject = {
   repoUrl: string | null;
   coverMediaId: string | null;
   coverUrl: string | null;
+  coverFocalX: number;
+  coverFocalY: number;
   isFeatured: boolean;
   techs: string[];
   gallery: GalleryItem[];
@@ -72,6 +75,11 @@ export function ProjectEditor({ project }: { project: EditorProject }) {
   const [techsText, setTechsText] = useState(project.techs.join(", "));
   const [coverUrl, setCoverUrl] = useState(project.coverUrl);
   const [coverMediaId, setCoverMediaId] = useState(project.coverMediaId);
+  // รูปที่เพิ่งอัปใหม่ยังไม่เคยตั้งจุดโฟกัส เริ่มที่กึ่งกลางเสมอ
+  const [coverFocal, setCoverFocal] = useState({
+    x: project.coverFocalX,
+    y: project.coverFocalY,
+  });
   const [gallery, setGallery] = useState<GalleryItem[]>(project.gallery);
   const [status, setStatus] = useState<ContentStatus>(project.status);
 
@@ -182,6 +190,7 @@ export function ProjectEditor({ project }: { project: EditorProject }) {
     if (!media) return;
     setCoverMediaId(media.id);
     setCoverUrl(media.url);
+    setCoverFocal({ x: 50, y: 50 });
     markDirty();
   }
 
@@ -198,6 +207,7 @@ export function ProjectEditor({ project }: { project: EditorProject }) {
       if (!coverMediaId) {
         setCoverMediaId(media.id);
         setCoverUrl(media.url);
+        setCoverFocal({ x: 50, y: 50 });
       }
       markDirty();
     }
@@ -441,13 +451,20 @@ export function ProjectEditor({ project }: { project: EditorProject }) {
 
         <aside className="space-y-5">
           <Panel title="รูปปก">
-            {coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={coverUrl}
-                alt=""
-                className="mb-2 w-full rounded-lg border border-line"
-              />
+            {coverUrl && coverMediaId ? (
+              <div className="mb-3">
+                <CoverFocalPicker
+                  key={coverMediaId}
+                  mediaId={coverMediaId}
+                  url={coverUrl}
+                  initialX={coverFocal.x}
+                  initialY={coverFocal.y}
+                  previews={[
+                    { label: "การ์ดในหน้ารวม", ratio: "4 / 3" },
+                    { label: "แบนเนอร์ด้านบน", ratio: "16 / 6" },
+                  ]}
+                />
+              </div>
             ) : null}
             <input
               ref={coverInput}

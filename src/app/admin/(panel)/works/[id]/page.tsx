@@ -31,6 +31,8 @@ export default async function EditProjectPage({
     repoUrl: project.repoUrl,
     coverMediaId: project.coverMediaId,
     coverUrl: project.cover ? mediaUrl(project.cover.path, 800) : null,
+    coverFocalX: project.cover?.focalX ?? 50,
+    coverFocalY: project.cover?.focalY ?? 50,
     isFeatured: project.isFeatured,
     techs: project.techs.map((t) => t.tech.name),
     gallery: project.gallery.map((g) => ({

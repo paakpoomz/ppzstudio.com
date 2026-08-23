@@ -32,6 +32,7 @@ export function ProjectCard({
               src={project.coverUrl}
               alt={project.coverAlt ?? ""}
               loading={priority ? "eager" : "lazy"}
+              style={{ objectPosition: project.coverPosition }}
               className="size-full object-cover transition duration-500 group-hover:scale-[1.03]"
             />
           ) : (

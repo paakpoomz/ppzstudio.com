@@ -36,6 +36,7 @@ export function PostCard({
               alt={post.coverAlt ?? ""}
               loading={priority ? "eager" : "lazy"}
               fetchPriority={priority ? "high" : "auto"}
+              style={{ objectPosition: post.coverPosition }}
               className="size-full object-cover transition duration-500 group-hover:scale-[1.03]"
             />
           ) : (

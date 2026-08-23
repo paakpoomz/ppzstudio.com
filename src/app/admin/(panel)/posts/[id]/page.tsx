@@ -35,6 +35,8 @@ export default async function EditPostPage({
     categoryId: post.categoryId,
     coverMediaId: post.coverMediaId,
     coverUrl: post.cover ? mediaUrl(post.cover.path) : null,
+    coverFocalX: post.cover?.focalX ?? 50,
+    coverFocalY: post.cover?.focalY ?? 50,
     tags: post.tags.map((t) => t.tag.name),
   };
 
